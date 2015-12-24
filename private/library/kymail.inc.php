@@ -1,0 +1,170 @@
+<?php
+/** 
+* KYMailクラス
+*
+* @license http://apache.org/licenses/LICENSE-2.0
+*
+* @copyright ©kyphone
+*/
+
+KYWeb::refuse_direct_access(".inc.php");
+
+/**
+* KYMailクラスはテンプレートからメールを作成、送信します。
+*
+* メールのテンプレートは `/private/mail` フォルダに `*.txt` として保存します。
+*
+* @license http://apache.org/licenses/LICENSE-2.0
+*
+* @copyright ©kyphone
+*/
+class KYMail {
+	/** @var object|null KYMailのインスタンス */
+	private static $_instance = null;
+	
+	/** @var string テンプレート */
+	private $_template;
+	
+	/** @var array 書き換え配列 */
+	private $_assign;
+	
+	/** @var string 件名 */
+	private $_subject;
+	
+	/** @var string 本文 */
+	private $_body;
+	
+	/**
+	* KYMailクラスのシングルトンです。
+	*
+	* @return object KYMailのインスタンス
+	*
+	* @example private/library/example/instance.php
+	*/
+	public static function instance() {
+		if (is_null(self::$_instance)) {
+			self::$_instance = new self;
+			
+			$page = self::$_instance;
+			$page->_template = "";
+			$page->_assign   = array();
+			$page->_result   = "";
+		}
+		return self::$_instance;
+	}
+	
+	/**
+	* メールのテンプレート名を指定します。
+	*
+	* テンプレート名は拡張子 `.txt` なしで指定します。 
+	*
+	* テンプレートは `/private/mail` に保存します。
+	*
+	* @param string $name テンプレート名
+	*
+	* @return object 自分自身(KYMailオブジェクト) 
+	*
+	* @example private/library/example/kymail_template.php
+	*/
+	public function template($name) {
+		$mail_path = PATH_PRIVATE . "/mail/{$name}.txt";
+		$this->_template = file_get_contents($mail_path);
+		return $this;
+	}
+	
+	/**
+	* テンプレート内で書き換える {タグ名} と値を指定します。
+	*
+	* @param string|array $param1 タグ名、もしくは、(タグ名, 値)の配列
+	* @param string $param2 書き換える値、$param1 が配列の場合は必要ない
+	*
+	* @return object 自分自身(KYMailオブジェクト) 
+	*
+	* @example private/library/example/kymail_assign.php
+	*/
+	public function assign($param1, $param2 = NULL) {
+		if (is_array($param1)) {
+			foreach ($param1 as $tag => $value) {
+				$this->assign($tag, $value);
+			}
+		} else if ($param1 != NULL && $param2 != NULL && !is_array($param1) && !is_array($param2)) {
+			$tag = $param1;
+			$value = $param2;
+			$this->_assign["{{$tag}}"] = $value;
+		}
+		return $this;
+	}
+	
+	/**
+	* テンプレートを読み込み、入れ替え部分を処理し、メールを送信します。
+	*
+	* @param string $from 送信元メールアドレス
+	* @param string $to 送信先メールアドレス
+	* @param string $cc Ccメールアドレス
+	*
+	* @return object 自分自身(KYMailオブジェクト) 
+	*
+	* @example private/library/example/kymail_send.php
+	*/
+	function send($from, $to, $cc = "") {
+		// Prepare data
+		$temp = explode("\r\n", $this->_template);
+		if ($this->_assign != NULL) {
+			$data = strtr($temp, $this->_assign);
+		}
+		
+		$data = array();
+		if (count($data) <= 1) { $data = explode("\r", $temp); }
+		if (count($data) <= 1) { $data = explode("\n", $temp); }
+		
+		$this->_subject = $data[0]; array_shift($data);
+		$this->_body = implode("\r\n", $data);
+		
+		// PEAR::Mail
+		require_once(PEAR_MAIL);
+		
+		// For send japanese email
+		mb_language("Japanese");
+		mb_internal_encoding("UTF-8");
+		$subject = mb_encode_mimeheader($this->_subject);
+		$body = mb_convert_encoding($this->_body, "ISO-2022-JP", "auto");
+		
+		// Prepare SMTP info
+		if (SMTP_AUTH) {
+			$params = array(
+				"host" => SMTP_SERVER,
+				"port" => SMTP_PORT,
+				"auth" => SMTP_AUTH,
+				"username" => SMTP_USER,
+				"password" => SMTP_PASS
+			);
+		} else {
+			$params = array(
+				"host" => SMTP_SERVER,
+				"port" => SMTP_PORT,
+				"auth" => SMTP_AUTH
+			);
+		}
+		
+		// Create PEAR::Mail object
+		$mail_object = Mail::factory("smtp", $params);
+		
+		// Set to & cc email address
+		$address = array($to);
+		if ($cc != "" && $cc != NULL) { $address[] = $cc; }
+		
+		// Create mail head info
+		$headers = array(
+			"To"	=> $to,
+			"From"	=> SMTP_FROM,
+			"Subject" => mb_encode_mimeheader($subject)
+		);
+		if ($cc != "") { $headers["Cc"] = $cc; }
+		
+		// Send
+		$mail_object->send($address, $headers, $body);
+		
+		return $this;
+	}
+}
+?>

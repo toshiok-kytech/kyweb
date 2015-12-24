@@ -1,0 +1,39 @@
+Version 1.0.0
+
++---------------+
+| Configuration |
++---------------+
+1) /public/require.inc.php
+	Set correct path to "config.inc.php"
+
+2) /public/config.inc.php
+	BASE CONFIG
+		Set error_reporting based on the next site (http://php.net/manual/en/function.error-reporting.php).
+		Set date_default_timezone_set based on the next site (http://php.net/manual/en/timezones.php).
+
+	SESSION
+		Set session lifetime in second.
+		Set probability that the garbage collection process is started on every session initialization.
+			gc_probability / gc_divisor ... 1 / 1 = 100%
+
+	WEB
+		Set WWW (root url address) for this site.
+		Set INDEX (index url address) for this site.
+		Set PATH_PUBLIC (public path) for this site.
+		Set PATH_PRIVATE (private path) for this site.
+		Set if need redrect url to ssl.
+
+	DATABASE
+		Set DB_SERVER (database server) name or ip address.
+		Set DB_USER (database user) for this database server.
+		Set DB_PASS (database password) for this database server.
+		Set DB_SCHEMA (database schema) for this system.
+
+	MAIL
+		Set PEAR_MAIL (PEAR::Mail) php module path.
+		Set SMTP_SERVER (Smtp server) name or ip address.
+		Set SMTP_PORT (Smtp port) number
+		Set SMTP_AUTH (Smtp Auth) if is need authentification.
+		Set SMTP_USER (Smtp user) for authentification.
+		Set SMTP_PASS (Smtp password) for authentification.
+		Set SMTP_FROM (Smtp from) for define from email address of sended email.

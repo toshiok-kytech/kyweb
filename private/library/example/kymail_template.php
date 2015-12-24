@@ -1,0 +1,3 @@
+<?php
+$mail->template("sample");
+?>

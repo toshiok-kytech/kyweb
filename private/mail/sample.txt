@@ -1,0 +1,3 @@
+Sample Mail Title
+Hello {NAME}.
+This is a sample mail of KYWeb framework.
