@@ -258,10 +258,19 @@ var _get = null;
 $.kyweb.get = function(name, value) {
 	if (_get == null) {
 		_get = [];
-		var pos = window.location.href.indexOf('?');
+		var pos1 = window.location.href.indexOf('?');
+		var pos2 = window.location.href.indexOf('#');
 		
-		if (pos > -1) {
-			var hashes = window.location.href.slice(pos + 1).split('&');
+		if (pos1 > -1) {
+			var args;
+			if (pos2 > -1) {
+				pos2 = pos2 - window.location.href.length;
+				args = window.location.href.slice(pos1 + 1, pos2);
+			} else {
+				args = window.location.href.slice(pos1 + 1)
+			}
+			
+			var hashes = args.split('&');
 			for(var i = 0; i < hashes.length; i++) {
 				var hash = hashes[i].split('=');
 				_get.push(hash[0]);
