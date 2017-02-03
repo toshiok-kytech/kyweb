@@ -41,11 +41,14 @@ define("CROSS_DOMAIN", "*");
 * DATABASE
 ********************************************************************************/
 
-define("DB_SERVER", "localhost");
-define("DB_USER", "");
-define("DB_PASS", "");
-define("DB_SCHEMA", "");
+// Multiple database server
+//define("DB_CONF_0", '{"HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
+//define("DB_CONF_1", '{"HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
 
+// Single database server
+define("DB_CONF", '{"HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
+
+define("ROW_COUNT", 50);
 
 /********************************************************************************
 * MAIL
