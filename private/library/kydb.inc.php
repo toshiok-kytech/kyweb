@@ -75,29 +75,30 @@ class KYDB {
             $db->_cnf_arr = [];
             if (defined("DB_CONF")) {
                 $cnf_str = constant("DB_CONF");
-                $cnf_arr = json_decode($cnf_str);
+                $cnf_arr = json_decode($cnf_str, true);
                 $db->_cnf_arr[$db->_cnf_cnt] = array(
-                    "HOST"     => isset($cnf_arr["HOST"])        ? $cnf_arr["HOST"]     : "localhost",
-                    "USER"     => isset($cnf_arr["USER"])        ? $cnf_arr["USER"]     : "",
-                    "PASSWORD" => isset($cnf_arr["PASSWORD"])    ? $cnf_arr["PASSWORD"] : "",
-                    "DATABASE" => isset($cnf_arr["DATABASE"])    ? $cnf_arr["DATABASE"] : "",
+                    "HOST"     => (isset($cnf_arr["HOST"])        ? $cnf_arr["HOST"]     : "localhost"),
+                    "USER"     => (isset($cnf_arr["USER"])        ? $cnf_arr["USER"]     : ""),
+                    "PASSWORD" => (isset($cnf_arr["PASSWORD"])    ? $cnf_arr["PASSWORD"] : ""),
+                    "DATABASE" => (isset($cnf_arr["DATABASE"])    ? $cnf_arr["DATABASE"] : ""),
                     "PORT"     => intval(isset($cnf_arr["PORT"]) ? $cnf_arr["PORT"]     : "3306")
                 );
                 $db->_cnf_cnt++;
             } else {
                 while ( defined("DB_CONF_{$db->_cnf_cnt}") ) {
                     $cnf_str = constant("DB_CONF_{$db->_cnf_cnt}");
-                    $cnf_arr = json_decode($cnf_str);
+                    $cnf_arr = json_decode($cnf_str, true);
                     $db->_cnf_arr[$db->_cnf_cnt] = array(
-                        "HOST"     => isset($cnf_arr["HOST"])        ? $cnf_arr["HOST"]     : "localhost",
-                        "USER"     => isset($cnf_arr["USER"])        ? $cnf_arr["USER"]     : "",
-                        "PASSWORD" => isset($cnf_arr["PASSWORD"])    ? $cnf_arr["PASSWORD"] : "",
-                        "DATABASE" => isset($cnf_arr["DATABASE"])    ? $cnf_arr["DATABASE"] : "",
+                        "HOST"     => (isset($cnf_arr["HOST"])        ? $cnf_arr["HOST"]     : "localhost"),
+                        "USER"     => (isset($cnf_arr["USER"])        ? $cnf_arr["USER"]     : ""),
+                        "PASSWORD" => (isset($cnf_arr["PASSWORD"])    ? $cnf_arr["PASSWORD"] : ""),
+                        "DATABASE" => (isset($cnf_arr["DATABASE"])    ? $cnf_arr["DATABASE"] : ""),
                         "PORT"     => intval(isset($cnf_arr["PORT"]) ? $cnf_arr["PORT"]     : "3306")
                     );
                     $db->_cnf_cnt++;
                 }
             }
+
         }
 
         return self::$_instance;
