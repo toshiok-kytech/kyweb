@@ -145,9 +145,10 @@ class KYWeb {
 		$this->_source_html = "";
 		$this->_result_html = "";
 		
-		$http = ($page->is_ssl() ? "https://" : "http://");
-		$url  = $http . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
-		$base_url = str_replace(WWW, "", $url);
+		//$http = ($page->is_ssl() ? "https://" : "http://");
+		//$url  = $http . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
+		//$base_url = str_replace(WWW, "", $url);
+        $base_url = $_SERVER["REQUEST_URI"];
 		$base_uri = explode("?", $base_url);
 		$base_uri = explode("/", $base_uri[0]);
 		$target   = $base_uri[1];
