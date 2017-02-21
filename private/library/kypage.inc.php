@@ -42,7 +42,7 @@ class KYPage extends KYHtml {
 	* コンストラクタ
 	*/
 	public function __construct() {
-		parent::__construct();
+        call_user_func_array('parent::' . __FUNCTION__, func_get_args());
 		$this->_samples = array();
 		$this->detect_device();
 	}
@@ -123,7 +123,7 @@ class KYPage extends KYHtml {
 	* @example private/library/example/kyhtml_assign.php
 	*/
 	public function assign() {
-		return parent::assign();
+        return call_user_func_array('parent::' . __FUNCTION__, func_get_args());
 	}
 	
 	/**
@@ -136,7 +136,7 @@ class KYPage extends KYHtml {
 	* @return object 自分自身(KYPageオブジェクト)
 	*/
 	public function process() {
-		parent::process();
+        call_user_func_array('parent::' . __FUNCTION__, func_get_args());
 		
 		$assign = array();
 		
