@@ -9,6 +9,8 @@
 
 KYWeb::refuse_direct_access(".inc.php");
 
+global $_STR;
+
 // Clear cache
 header("Expires: -1");
 header("Cache-Control: no-cache");
@@ -16,13 +18,14 @@ header("Pragma: no-cache");
 clearstatcache();
 
 // Require
-require_once(PATH_PRIVATE . "/library/kyapi.inc.php");
-require_once(PATH_PRIVATE . "/library/kydb.inc.php");
-require_once(PATH_PRIVATE . "/library/kyfile.inc.php");
-require_once(PATH_PRIVATE . "/library/kyhtml.inc.php");
-require_once(PATH_PRIVATE . "/library/kymail.inc.php");
-require_once(PATH_PRIVATE . "/library/kypage.inc.php");
-require_once(PATH_PRIVATE . "/library/kysample.inc.php");
+require_once(PRIVATE_PATH . "/library/kycommon.inc.php");
+require_once(PRIVATE_PATH . "/library/kyapi.inc.php");
+require_once(PRIVATE_PATH . "/library/kydb.inc.php");
+require_once(PRIVATE_PATH . "/library/kyfile.inc.php");
+require_once(PRIVATE_PATH . "/library/kyhtml.inc.php");
+require_once(PRIVATE_PATH . "/library/kymail.inc.php");
+require_once(PRIVATE_PATH . "/library/kypage.inc.php");
+require_once(PRIVATE_PATH . "/library/kysample.inc.php");
 
 // Redirect to SSL
 if (REDIRECT_SSL && $_SERVER["HTTPS"] != "on") {
@@ -149,6 +152,7 @@ class KYWeb {
         //$url  = $http . $_SERVER["HTTP_HOST"] . $_SERVER["REQUEST_URI"];
         //$base_url = str_replace(WWW, "", $url);
         $base_url = $_SERVER["REQUEST_URI"];
+        $base_url = str_replace(WWW, "", $base_url);
         $base_uri = explode("?", $base_url);
         $base_uri = explode("/", $base_uri[0]);
         $target   = $base_uri[1];
@@ -156,16 +160,16 @@ class KYWeb {
         if ($target == "page") {
             return $this->process_uri()->process_html()->process_php();
         } else if ($target == "api") {
-            $this->_api_path = PATH_PRIVATE . "/api/" . $base_uri[2] . ".php";
+            $this->_api_path = PRIVATE_PATH . "/api/" . $base_uri[2] . ".php";
             if (file_exists($this->_api_path) == true) {
-                $this->_common_php_path = PATH_PRIVATE . "/php/common.php";
+                $this->_common_php_path = PRIVATE_PATH . "/php/common.php";
                 if (file_exists($this->_common_php_path)) require_once($this->_common_php_path);
 
                 require_once($this->_api_path);
                 return $this;
             }
         }
-
+		
         header("HTTP/1.1 404 Not Found");
         exit;
     }
@@ -198,11 +202,11 @@ class KYWeb {
 
             KYPage::instance()->name($page_name);
 
-            $this->_common_html_path = PATH_PUBLIC . "/html/common.html";
-            $this->_common_php_path  = PATH_PRIVATE . "/php/common.php";
-            $this->_page_html_path   = PATH_PUBLIC . "/html/{$page_name}.html";
-            $page_html_mobile_path   = PATH_PUBLIC . "/html/{$page_name}_mobile.html";
-            $this->_page_php_path    = PATH_PRIVATE . "/php/{$page_name}.php";
+            $this->_common_html_path = PUBLIC_PATH . "/html/common.html";
+            $this->_common_php_path  = PRIVATE_PATH . "/php/common.php";
+            $this->_page_html_path   = PUBLIC_PATH . "/html/{$page_name}.html";
+            $page_html_mobile_path   = PUBLIC_PATH . "/html/{$page_name}_mobile.html";
+            $this->_page_php_path    = PRIVATE_PATH . "/php/{$page_name}.php";
 
             // Is common html
             if ($page_name === "common") {
@@ -251,7 +255,7 @@ class KYWeb {
         $this->_source_html = file_get_contents($this->_page_html_path);
 
         // ++: Remove html extention
-        $this->_source_html = str_replace(".html", "", $this->_source_html);
+        $this->_source_html = preg_replace("/page\/(.*)\.html/", "page/$1", $this->_source_html);
 
         // ++: Replace common source
         $common_html = "";
@@ -289,6 +293,8 @@ class KYWeb {
                 $this->_source_html = strtr($this->_source_html, $assign);
                 $this->_result_html = $this->_source_html;
             }
+        } else {
+            $this->_result_html = $this->_source_html;
         }
 
         return $this;
@@ -300,12 +306,10 @@ class KYWeb {
      * @access private
      */
     private function process_php() {
-        if (file_exists($this->_common_php_path) || file_exists($this->_page_php_path)) {
-            KYWeb::page()->html($this->_result_html);
-            if (file_exists($this->_common_php_path)) require_once($this->_common_php_path);
-            if (file_exists($this->_page_php_path)) require_once($this->_page_php_path);
-            $this->_result_html = KYWeb::page()->process()->result();
-        }
+        KYWeb::page()->html($this->_result_html);
+        if (file_exists($this->_common_php_path)) require_once($this->_common_php_path);
+        if (file_exists($this->_page_php_path)) require_once($this->_page_php_path);
+        $this->_result_html = KYWeb::page()->process()->result();
         return $this;
     }
 
@@ -325,4 +329,3 @@ class KYWeb {
         }
     }
 }
-?>

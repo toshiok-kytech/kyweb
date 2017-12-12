@@ -4,7 +4,8 @@
 ********************************************************************************/
 
 // http://php.net/manual/en/function.error-reporting.php
-error_reporting(E_ALL);
+error_reporting(E_ALL);// & ~E_NOTICE & ~E_WARNING);
+ini_set("display_errors", 1);
 
 // http://php.net/manual/en/timezones.php
 date_default_timezone_set("Asia/Tokyo");
@@ -35,28 +36,48 @@ define("PATH_PUBLIC", dirname(__FILE__) . "/../public");
 define("PATH_PRIVATE", dirname(__FILE__) . "/../private");
 define("REDIRECT_SSL", false);
 define("CROSS_DOMAIN", "*");
+define("LANGUAGE", "ja");
 
 
 /********************************************************************************
 * DATABASE
 ********************************************************************************/
 
-define("DB_SERVER", "localhost");
-define("DB_USER", "");
-define("DB_PASS", "");
-define("DB_SCHEMA", "");
+define("DB_CONF_1", '{"ENGINE":"MySQL", "HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
+define("ROW_COUNT", 50);
 
 
 /********************************************************************************
 * MAIL
 ********************************************************************************/
 
-define("PEAR_MAIL", "Mail.php");
-define("SMTP_SERVER", "localhost");
-define("SMTP_PORT", 25);
-define("SMTP_AUTH", false);
-define("SMTP_USER", "");
-define("SMTP_PASS", "");
-define("SMTP_FROM", "");
+// Remove comment for select which mail send method for use.
+//define("MAIL_METHOD", "PEAR_MAIL");
+//define("MAIL_METHOD", "SENDGRID");
+
+if (MAIL_METHOD == "PEAR_MAIL") {
+    define("PEAR_MAIL", "Mail.php");
+    define("SMTP_SERVER", "");
+    define("SMTP_PORT", 587);
+    define("SMTP_AUTH", true);
+    define("SMTP_USER", "");
+    define("SMTP_PASS", "");
+
+} else if (MAIL_METHOD == "SENDGRID") {
+    define("SENDGRID", "https://api.sendgrid.com/");
+    define("SNEDGRID_USER", "");
+    define("SNEDGRID_PASS", "");
+}
+
+define("MAIL_FROM", "no_replay@charpy.jp");
+
+
+/********************************************************************************
+ * CURL
+ ********************************************************************************/
+
+define("CURL_CACERT_URL", "https://curl.haxx.se/ca/cacert.pem");
+define("CURL_CACERT_PATH", PRIVATE_PATH . "/file/cacert.pem");
+define("CURL_CACERT_UPDATE", 86400);        // 24h * 60m * 60s = 86400s
 
 ?>

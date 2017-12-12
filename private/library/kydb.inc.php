@@ -22,14 +22,14 @@ class KYDB {
     /** @var object|null KYDBのインスタンス */
     private static $_instance = null;
 
-    /** @var int サーバー接続設定数 (config.inc.php で定義) */
-    private $_cnf_cnt;
-
     /** @var array サーバー接続情報の配列 (config.inc.php で定義) */
     private $_cnf_arr;
 
+    /** @var string データベースエンジン名 (mysql, sqlsrv) */
+    private $_engine;
+
     /** @var int MySQL リンク ID */
-    private $_link;
+    private $_conn;
 
     /** @var int エラー番号 */
     private $_errno;
@@ -47,14 +47,7 @@ class KYDB {
      * コンストラクタ
      */
     private function __construct() {
-        // Load query
-        $query_path = PATH_PRIVATE . "/query";
-        $file_list = KYFile::instance()->file_list($query_path);
-        foreach ($file_list as $fileName) {
-            if (substr(basename($fileName), -8) == ".sql.php") {
-                include_once($query_path . "/{$fileName}");
-            }
-        }
+
     }
 
     /**
@@ -69,73 +62,128 @@ class KYDB {
             self::$_instance = new self;
 
             $db = self::$_instance;
-            $db->_link = 0;
-
-            $db->_cnf_cnt = 0;
-            $db->_cnf_arr = [];
+            $db->_conn = 0;
+            $db->clear_db_conf();
+            
             if (defined("DB_CONF")) {
-                $cnf_str = constant("DB_CONF");
-                $cnf_arr = json_decode($cnf_str, true);
-                $db->_cnf_arr[$db->_cnf_cnt] = array(
-                    "HOST"     => (isset($cnf_arr["HOST"])        ? $cnf_arr["HOST"]     : "localhost"),
-                    "USER"     => (isset($cnf_arr["USER"])        ? $cnf_arr["USER"]     : ""),
-                    "PASSWORD" => (isset($cnf_arr["PASSWORD"])    ? $cnf_arr["PASSWORD"] : ""),
-                    "DATABASE" => (isset($cnf_arr["DATABASE"])    ? $cnf_arr["DATABASE"] : ""),
-                    "PORT"     => intval(isset($cnf_arr["PORT"]) ? $cnf_arr["PORT"]     : "3306")
-                );
-                $db->_cnf_cnt++;
+                $db->add_db_conf( 1, constant("DB_CONF") );
             } else {
-                while ( defined("DB_CONF_{$db->_cnf_cnt}") ) {
-                    $cnf_str = constant("DB_CONF_{$db->_cnf_cnt}");
-                    $cnf_arr = json_decode($cnf_str, true);
-                    $db->_cnf_arr[$db->_cnf_cnt] = array(
-                        "HOST"     => (isset($cnf_arr["HOST"])        ? $cnf_arr["HOST"]     : "localhost"),
-                        "USER"     => (isset($cnf_arr["USER"])        ? $cnf_arr["USER"]     : ""),
-                        "PASSWORD" => (isset($cnf_arr["PASSWORD"])    ? $cnf_arr["PASSWORD"] : ""),
-                        "DATABASE" => (isset($cnf_arr["DATABASE"])    ? $cnf_arr["DATABASE"] : ""),
-                        "PORT"     => intval(isset($cnf_arr["PORT"]) ? $cnf_arr["PORT"]     : "3306")
-                    );
-                    $db->_cnf_cnt++;
+                $num = 1;
+                while ( defined("DB_CONF_{$num}") ) {
+                    $db->add_db_conf($num, constant("DB_CONF_{$num}") );
+                    $num++;
                 }
             }
-
         }
 
         return self::$_instance;
     }
 
+    public function clear_db_conf() {
+        $this->_cnf_arr = [[]];
+    }
+
+    public function add_db_conf($num, $conf) {
+        $cnf_json = json_decode($conf, true);
+        $this->_cnf_arr[$num] = array(
+            "ENGINE"   => (isset($cnf_json["ENGINE"])      ? strtolower($cnf_json["ENGINE"]) : "mysql"),
+            "HOST"     => (isset($cnf_json["HOST"])        ? $cnf_json["HOST"]     : "localhost"),
+            "USER"     => (isset($cnf_json["USER"])        ? $cnf_json["USER"]     : ""),
+            "PASSWORD" => (isset($cnf_json["PASSWORD"])    ? $cnf_json["PASSWORD"] : ""),
+            "DATABASE" => (isset($cnf_json["DATABASE"])    ? $cnf_json["DATABASE"] : ""),
+            "PORT"     => intval(isset($cnf_json["PORT"]) ? $cnf_json["PORT"]     : "3306")
+        );
+    }
+
     /**
      * データベースへの接続を行います。
      *
-     * @param int $cnf_index 接続するデータベース設定Index (Optional default=0)
+     * @param int $cnf_num 接続するデータベース設定Index (Optional default=1)
      *
      * @return mixed 接続結果、失敗の場合 false を返します
      */
-    public function connect($cnf_index = 0) {
+    public function connect($cnf_num = 1) {
         $this->_errno = 0;
         $this->_error = "";
 
-        if (isset($this->_cnf_arr[$cnf_index]) == false) {
+        if (isset($this->_cnf_arr[$cnf_num]) == false) {
             return (false);
         }
 
-        $this->_link = @mysqli_connect(
-            $this->_cnf_arr[$cnf_index]["HOST"],
-            $this->_cnf_arr[$cnf_index]["USER"],
-            $this->_cnf_arr[$cnf_index]["PASSWORD"],
-            "",
-            $this->_cnf_arr[$cnf_index]["PORT"]);
-        if ($this->_link == false) {
+        $this->_engine = $this->_cnf_arr[$cnf_num]["ENGINE"];
+
+
+        // Load query
+        $query_path = PRIVATE_PATH . "/query";
+        $file_list = KYFile::instance()->file_list($query_path);
+        foreach ($file_list as $fileName) {
+            if ($this->_engine == "mysql") {
+                if (substr(basename($fileName), -10) == ".mysql.php") {
+                    include_once($query_path . "/{$fileName}");
+                }
+
+            } else if ($this->_engine == "sqlsrv") {
+                if (substr(basename($fileName), -11) == ".sqlsrv.php") {
+                    include_once($query_path . "/{$fileName}");
+                }
+            }
+        }
+
+
+
+        if ($this->_engine == "mysql") {
+            $this->_conn = @mysqli_connect(
+                $this->_cnf_arr[$cnf_num]["HOST"],
+                $this->_cnf_arr[$cnf_num]["USER"],
+                $this->_cnf_arr[$cnf_num]["PASSWORD"],
+                "",
+                $this->_cnf_arr[$cnf_num]["PORT"]);
+
+        } else if ($this->_engine == "sqlsrv") {
+            $serverName = "tcp:" . $this->_cnf_arr[$cnf_num]["HOST"] . "," . $this->_cnf_arr[$cnf_num]["PORT"];
+            $connectionInfo = array(
+                "UID"          => $this->_cnf_arr[$cnf_num]["USER"],
+                "pwd"          => $this->_cnf_arr[$cnf_num]["PASSWORD"],
+                "Database"     => $this->_cnf_arr[$cnf_num]["DATABASE"],
+                "LoginTimeout" => 30,
+                "Encrypt"      => 1,
+                "TrustServerCertificate" => 0,
+                "CharacterSet" => "UTF-8");
+            $this->_conn = sqlsrv_connect($serverName, $connectionInfo);
+
+
+            /*
+            try {
+                $host = $this->_cnf_arr[$cnf_num]["HOST"];
+                $port = $this->_cnf_arr[$cnf_num]["PORT"];
+                $database = $this->_cnf_arr[$cnf_num]["DATABASE"];
+                $username = $this->_cnf_arr[$cnf_num]["USER"];
+                $password = $this->_cnf_arr[$cnf_num]["PASSWORD"];
+                $this->_conn = new PDO("sqlsrv:server = tcp:{$host},{$port}; Database = {$database}", $username, $password);
+                $this->_conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            }
+            catch (PDOException $e) {
+                $this->_conn == false;
+            }
+            */
+        }
+
+        if ($this->_conn == false) {
             $this->_errno = 1;
             $this->_error = "Can't connect to database.";
             return (false);
         }
 
-        $result = @mysqli_select_db($this->_link, $this->_cnf_arr[$cnf_index]["DATABASE"]);
-        if ($result == false) {
-            $this->_errno = 2;
-            $this->_error = "Can't select to database.";
-            return (false);
+        if ($this->_engine == "mysql") {
+            $result = @mysqli_select_db($this->_conn, $this->_cnf_arr[$cnf_num]["DATABASE"]);
+            if ($result == false) {
+                $this->_errno = 2;
+                $this->_error = "Can't select to database.";
+                return (false);
+            }
+
+        } else if ($this->_engine == "sqlsrv") {
+            $result = true;
         }
 
         return ($result);
@@ -147,11 +195,14 @@ class KYDB {
      * @return mixed 切断結果、失敗の場合 false を返します
      */
     public function close() {
-        $result = mysqli_close($this->_link);
-        if ($result == false) {
-            return (false);
+        if ($this->_engine == "mysql") {
+            return mysqli_close($this->_conn);
+
+        } else if ($this->_engine == "sqlsrv") {
+            return sqlsrv_close($this->_conn);
         }
-        return ($result);
+
+        return (false);
     }
 
     /**
@@ -160,11 +211,20 @@ class KYDB {
      * @return mixed 開始結果、失敗の場合 false を返します
      */
     public function begin() {
-        $result = mysqli_query($this->_link, "BEGIN");
-        if ($result == false) {
-            $this->_errno = mysqli_errno($this->_link);
-            $this->_error = mysqli_error($this->_link);
+        $result = false;
+
+        if ($this->_engine == "mysql") {
+            $result = mysqli_query($this->_conn, "BEGIN");
+
+        } else if ($this->_engine == "sqlsrv") {
+            $result = sqlsrv_begin_transaction($this->_conn);
         }
+
+        if ($result == false) {
+            $this->_errno = mysqli_errno($this->_conn);
+            $this->_error = mysqli_error($this->_conn);
+        }
+
         return ($result);
     }
 
@@ -176,12 +236,25 @@ class KYDB {
      *
      * @return mixed 終了結果、失敗の場合 false を返します
      */
-    public function end() {
-        if ($this->_errno == 0 && $this->_errno == "")
-            $result = mysqli_query($this->_link, "COMMIT");
-        else
-            $result = mysqli_query($this->_link, "ROLLBACK");
-        return ($result);
+    public function end($rollback = false) {
+        if ($this->_errno == 0 && $this->_errno == "" && $rollback == false) {
+            if ($this->_engine == "mysql") {
+                return mysqli_query($this->_conn, "COMMIT");
+
+            } else if ($this->_engine == "sqlsrv") {
+                return sqlsrv_commit($this->_conn);
+            }
+
+        } else {
+            if ($this->_engine == "mysql") {
+                return mysqli_query($this->_conn, "ROLLBACK");
+
+            } else if ($this->_engine == "sqlsrv") {
+                return sqlsrv_rollback($this->_conn);
+            }
+        }
+
+        return (false);
     }
 
     /**
@@ -191,7 +264,18 @@ class KYDB {
      */
     public function insert_id() {
         if ($this->_errno != 0) { return false; }
-        return (mysqli_insert_id($this->_link));
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_insert_id($this->_conn));
+
+        } else if ($this->_engine == "sqlsrv") {
+            $dbres = sqlsrv_query($this->_conn, "SELECT last_insert_id=@@identity");
+            $dbrow = sqlsrv_fetch_array($dbres);
+            $last_insert_id = $dbrow[0];
+            return ($last_insert_id);
+        }
+
+        return (0);
     }
 
     /**
@@ -226,7 +310,15 @@ class KYDB {
     public function fetch_array($res = "") {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return (mysqli_fetch_array($res));
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_fetch_array($res));
+
+        } else if ($this->_engine == "sqlsrv") {
+            return (sqlsrv_fetch_array($res));
+        }
+
+        return (false);
     }
 
     /**
@@ -234,12 +326,17 @@ class KYDB {
      *
      * @param int $res クエリの実行リソース
      *
-     * @return array 取得された行に対応する文字列の配列を返します。もう行がない場合は、 FALSE を返します
+     * @return array 取得された行に対応する文字列の配列を返します。もう行がない場合は、 false を返します (SQL Server では使用不可)
      */
     public function fetch_row($res = "") {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return (mysqli_fetch_row($res));
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_fetch_row($res));
+        }
+
+        return (false);
     }
 
     /**
@@ -247,12 +344,20 @@ class KYDB {
      *
      * @param int $res クエリの実行リソース
      *
-     * @return array 取得した行に対応する文字列の連想配列を返します。もう行がない場合は、 FALSE を返します
+     * @return array 取得した行に対応する文字列の連想配列を返します。もう行がない場合は、 false を返します
      */
     public function fetch_assoc($res = "") {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return (mysqli_fetch_assoc($res));
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_fetch_assoc($res));
+
+        } else if ($this->_engine == "sqlsrv") {
+            return (sqlsrv_fetch_array($res));
+        }
+
+        return (false);
     }
 
     /**
@@ -275,18 +380,43 @@ class KYDB {
      *		<li>unsigned - カラムが符号無し(unsigned)であれば 1</li>
      *		<li>zerofill - カラムがゼロで埋められている(zero-filled)場合に 1</li>
      *	</ul>
+     *  SQL Server の場合arrayを返します。キーは次の通りです。
+     *  <ul>
+     *		<li>Name - The name of the field.</li>
+     *		<li>Type - The numeric value for the SQL type.</li>
+     * 		<li>Size - The number of characters for fields of character type, the number of bytes for fields of binary type, or NULL for other types.</li>
+     * 		<li>Precision - The precision for types of variable precision, NULL for other types.</li>
+     * 		<li>Scale - The scale for types of variable scale, NULL for other types.</li>
+     * 		<li>Nullable - An enumeration indicating whether the column is nullable, not nullable, or if it is not known.</li>
+     *  </ul>
      */
     public function fetch_field($res = "") {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return (mysqli_fetch_field($res));
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_fetch_field($res));
+
+        } else if ($this->_engine == "sqlsrv") {
+            return (sqlsrv_field_metadata($res));
+        }
+
+        return (false);
     }
 
     /**
      * 結果の任意の行にポインタを移動する。
      *
      * @param int $res クエリの実行リソース
-     * @param int $pos ゼロから全行数 - 1 までの間
+     * @param int $pos ゼロから全行数 - 1 までの間。SQL Server の場合は次を使用できます。
+     * <ul>
+     *   <li>SQLSRV_SCROLL_NEXT</li>
+     *   <li>SQLSRV_SCROLL_PRIOR</li>
+     *   <li>SQLSRV_SCROLL_FIRST</li>
+     *   <li>SQLSRV_SCROLL_LAST</li>
+     *   <li>SQLSRV_SCROLL_ABSOLUTE</li>
+     *   <li>SQLSRV_SCROLL_RELATIVE</li>
+     * </ul>
      *
      * @return boolean 成功した場合に true を、失敗した場合に false を返します
      */
@@ -294,8 +424,14 @@ class KYDB {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
         if ($this->num_rows($res) > 0) {
-            return (mysqli_data_seek($res, $pos));
+            if ($this->_engine == "mysql") {
+                return (mysqli_data_seek($res, $pos));
+
+            } else if ($this->_engine == "sqlsrv") {
+                return (sqlsrv_fetch($res, $pos));
+            }
         }
+        return (false);
     }
 
     /**
@@ -304,12 +440,15 @@ class KYDB {
      * @param int $res クエリの実行リソース
      * @param int $num ゼロからフィールド数 - 1 までの間
      *
-     * @return boolean 成功した場合に true を、失敗した場合に false を返します
+     * @return boolean 成功した場合に true を、失敗した場合に false を返します (SQL Server は使用不可)
      */
     public function field_seek($res = "", $num = 0) {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return (mysqli_field_seek($res, $num));
+        if ($this->_engine == "mysql") {
+            return (mysqli_field_seek($res, $num));
+        }
+        return (false);
     }
 
     /**
@@ -317,9 +456,18 @@ class KYDB {
      *
      * @return int 成功した場合に変更された行の数を、直近のクエリが失敗した場合に -1 を返します。
      */
-    public function affected_rows() {
+    public function affected_rows($res = "") {
         if ($this->_errno != 0) { return false; }
-        return (mysqli_affected_rows($this->_link));
+        if ($res == "") $res = $this->_res;
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_stmt_affected_rows($res));
+
+        } else if ($this->_engine == "sqlsrv") {
+            return (sqlsrv_rows_affected($res));
+        }
+
+        return (false);
     }
 
     /**
@@ -332,7 +480,15 @@ class KYDB {
     public function free_result($res = "") {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return mysqli_free_result($res);
+
+        if ($this->_engine == "mysql") {
+            return mysqli_free_result($res);
+
+        } else if ($this->_engine == "sqlsrv") {
+            return sqlsrv_free_stmt($res);
+        }
+
+        return (false);
     }
 
     /**
@@ -345,7 +501,15 @@ class KYDB {
     public function num_fields($res = "") {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return (mysqli_num_fields($res));
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_num_fields($res));
+
+        } else if ($this->_engine == "sqlsrv") {
+            return (sqlsrv_num_fields($res));
+        }
+
+        return (false);
     }
 
     /**
@@ -358,7 +522,15 @@ class KYDB {
     public function num_rows($res = "") {
         if ($this->_errno != 0) { return false; }
         if ($res == "") $res = $this->_res;
-        return (mysqli_num_rows($res));
+
+        if ($this->_engine == "mysql") {
+            return (mysqli_num_rows($res));
+
+        } else if ($this->_engine == "sqlsrv") {
+            return (sqlsrv_num_rows($res));
+        }
+
+        return (false);
     }
 
     /**
@@ -376,7 +548,7 @@ class KYDB {
      * @return int 設定数
      */
     public function num_cnf() {
-        return $this->_cnf_cnt;
+        return count($this->_cnf_arr) - 1;
     }
 
     /**
@@ -393,22 +565,57 @@ class KYDB {
     public function execute($name, $params = NULL) {
         if ($this->_errno != 0) { return (false); }
 
-        try {
-            $this->_sql = call_user_func_array("q{$name}", array($this, $params));
-        } catch (Exception $err) {
-            $this->_sql = "";
+        if ($name == "SQL") {
+            $this->_sql = $params;
+        } else {
+            try {
+                $this->_sql = call_user_func_array("q{$name}", array($this, $params));
+            } catch (Exception $err) {
+                $this->_sql = "";
+            }
         }
 
         $this->_res = NULL;
         if ($this->_sql != "") {
-            $result = mysqli_query($this->_link, "SET NAMES utf8");
-            $result = mysqli_query($this->_link, $this->_sql);
+            $result = null;
+
+            if ($this->_engine == "mysql") {
+                mysqli_query($this->_conn, "SET NAMES utf8");
+                $result = mysqli_multi_query($this->_conn, $this->_sql);
+
+            } else if ($this->_engine == "sqlsrv") {
+                $result = sqlsrv_query($this->_conn, $this->_sql);
+            }
 
             if (!$result) {
-                $this->_errno = mysqli_errno($this->_link);
-                $this->_error = mysqli_error($this->_link);
+                if ($this->_engine == "mysql") {
+                    $this->_errno = mysqli_errno($this->_conn);
+                    $this->_error = mysqli_error($this->_conn);
+
+                } else if ($this->_engine == "sqlsrv") {
+                    $errors = sqlsrv_errors(SQLSRV_ERR_ERRORS);
+                    foreach ( $errors as $error ) {
+                        $this->_errno = $error["code"];
+                        $this->_error = $error["message"];
+                    }
+                }
                 return (false);
             }
+
+            while (true) {
+                if ($this->_engine == "mysql") {
+                    $result = mysqli_store_result($this->_conn);
+                    if (mysqli_more_results($this->_conn) == false) {
+                        break;
+                    }
+                    if ($result != null) $result->free();
+                    mysqli_next_result($this->_conn);
+
+                } else if ($this->_engine == "sqlsrv") {
+                    break;
+                }
+            }
+
             $this->_res = $result;
             return ($result);
         }
@@ -425,9 +632,10 @@ class KYDB {
      *
      * @param int $value 数値
      *
-     * @return int 数値
+     * @return int 数値 ($value == null の場合 null を返す)
      */
     public function int($value) {
+        if ($value === null) { return null; }
         return (int) sprintf("%d", $value);
     }
 
@@ -437,9 +645,10 @@ class KYDB {
      *
      * @param float $value 数値
      *
-     * @return float 数値
+     * @return float 数値 ($value == null の場合 null を返す)
      */
     public function float($value) {
+        if ($value === null) { return null; }
         return sprintf("%f", $value);
     }
 
@@ -449,11 +658,12 @@ class KYDB {
      *
      * @param string $value 文字列
      *
-     * @return string 文字列
+     * @return string 文字列 ($value == null の場合 null を返す)
      */
     public function string($value) {
-        return mysqli_real_escape_string($this->_link, $value);
-        return $value;
+        if ($value === null) { return null; }
+        //return mysqli_real_escape_string($this->_conn, $value);
+        return $this->escape_string($value);
     }
 
     /**
@@ -570,4 +780,25 @@ class KYDB {
         return ( "LIMIT " . $offset . ", " . ROW_COUNT );
     }
 
+    /**
+     * @param $data
+     * @return mixed|string
+     */
+    public function escape_string($data) {
+        if ( !isset($data) or empty($data) ) return '';
+        if ( is_numeric($data) ) return $data;
+
+        $non_displayables = array(
+            '/%0[0-8bcef]/',            // url encoded 00-08, 11, 12, 14, 15
+            '/%1[0-9a-f]/',             // url encoded 16-31
+            '/[\x00-\x08]/',            // 00-08
+            '/\x0b/',                   // 11
+            '/\x0c/',                   // 12
+            '/[\x0e-\x1f]/'             // 14-31
+        );
+        foreach ( $non_displayables as $regex )
+            $data = preg_replace( $regex, '', $data );
+        $data = str_replace("'", "''", $data );
+        return $data;
+    }
 }
