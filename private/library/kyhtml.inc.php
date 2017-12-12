@@ -87,11 +87,20 @@ class KYHtml {
 	* @return object 自分自身(KYHtmlオブジェクト)
 	*/
 	public function process() {
+	    global $_STR;
+
+	    if (!empty($_STR)) {
+            foreach ($_STR as $key => $value) {
+                $this->assign("STR:{$key}", $value);
+            }
+        }
+
 		if ($this->_assign == NULL) {
 			$this->_result = $this->_html;
 		} else {
 			$this->_result = strtr($this->_html, $this->_assign);
 		}
+
 		return $this;
 	}
 	

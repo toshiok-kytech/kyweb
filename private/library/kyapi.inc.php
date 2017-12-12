@@ -9,6 +9,7 @@
 
 KYWeb::refuse_direct_access(".inc.php");
 
+
 /**
 * KYApiクラスはAPI機能の実行を行うためのクラスです。
 *
@@ -43,17 +44,36 @@ class KYApi {
 	*
 	* @return string 32バイトのアクセストークン
 	*/
-	public function generate_token($seed = NULL) {
-		if ($seed === NULL) {
-			return md5($seed);
-		}
-		$token_length = 16; // 16 * 2 = 32 byte
-		$bytes = openssl_random_pseudo_bytes($token_length);
-		return bin2hex($bytes);
-	}
-	
-	
-	/**
+	public function generate_token($seed = NULL)
+    {
+        if ($seed !== NULL) {
+            return md5($seed);
+        }
+        $token_length = 16; // 16 * 2 = 32 byte
+        $bytes = openssl_random_pseudo_bytes($token_length);
+        return bin2hex($bytes);
+    }
+
+    /**
+     * クライアントヘッダー情報を取得する。
+     *
+     * @return array クライアントヘッダー情報
+     *
+     * @example private/library/example/kyapi_request_headers.php
+     */
+    public function request_headers() {
+        $headers = array();
+        foreach(array_keys($_SERVER) as $skey) {
+            if(substr($skey, 0, 5) == "HTTP_") {
+                $headername = ucwords(strtoupper(str_replace("_", " ", substr($skey, 5))));
+                $headername = str_replace(" ", "-", $headername);
+                $headers[$headername] = $_SERVER[$skey];
+            }
+        }
+        return $headers;
+    }
+
+    /**
 	* クライアントヘッダー情報からアクセストークンを取得する。
 	*
 	* @return string アクセストークン
@@ -61,15 +81,32 @@ class KYApi {
 	* @example private/library/example/kyapi_get_headers_token.php
 	*/
 	public function get_headers_token() {
-		$headers = apache_request_headers();
-		if (isset($headers["Authorization"])) {
-			if (stristr($headers["Authorization"], "x-kyweb-token") != false) {
-				$token = trim(str_ireplace("x-kyweb-token", "", $headers["Authorization"]));
+		$headers = self::request_headers();
+		if (isset($headers["AUTHORIZATION"])) {
+			if (stristr($headers["AUTHORIZATION"], "X-KYWEB-TOKEN") != false) {
+				$token = trim(str_ireplace("X-KYWEB-TOKEN", "", $headers["AUTHORIZATION"]));
 				return $token;
 			}
 		}
 		return "";
 	}
+
+    /**
+     * クライアントヘッダー情報から任意のヘッダー名の値を取得する。
+     *
+     * @param string $name ヘッダー名
+     *
+     * @param mixed %default ヘッダー名がない場合のデフォルト値
+     *
+     * @return mixed 値、または、デフォルト値
+     */
+    public function get_header($name, $default = "") {
+        $headers = self::request_headers();
+        $name = strtoupper($name);
+        $value = isset($headers[$name]) ? $headers[$name] : NULL;
+        if ($value == NULL) { $value = $default; }
+        return ($value);
+    }
 	
 	/**
 	* CURLリクエストを開始します。
@@ -150,13 +187,13 @@ class KYApi {
 		// Start request
 		
 		$body = NULL;
-		
+
 		if ($format == "XML") {
-			$xml  = curl_exec($curl_handler);
+            $xml  = curl_exec_cacert($curl_handler);
 			$data = simplexml_load_string($xml);
 			$body = json_decode(json_encode($data), true);
 		} else {
-			$body = json_decode(curl_exec($curl_handler), true);
+			$body = json_decode(curl_exec_cacert($curl_handler), true);
 		}
 		$encode = mb_convert_variables("UTF-8", "auto", $body);
 		
