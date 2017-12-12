@@ -43,9 +43,14 @@ define("LANGUAGE", "ja");
 * DATABASE
 ********************************************************************************/
 
-define("DB_CONF_1", '{"ENGINE":"MySQL", "HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
-define("ROW_COUNT", 50);
+// Multiple database server
+//define("DB_CONF_0", '{"ENGINE":"MySQL", "HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
+//define("DB_CONF_1", '{"ENGINE":"MySQL", "HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
 
+// Single database server
+define("DB_CONF", '{"ENGINE":"MySQL", "HOST":"localhost", "PORT":"3306", "DATABASE":"", "USER":"", "PASSWORD":""}');
+
+define("ROW_COUNT", 50);
 
 /********************************************************************************
 * MAIL
