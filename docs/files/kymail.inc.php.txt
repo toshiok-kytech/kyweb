@@ -67,7 +67,7 @@ class KYMail {
 	* @example private/library/example/kymail_template.php
 	*/
 	public function template($name) {
-		$mail_path = PATH_PRIVATE . "/mail/{$name}.txt";
+		$mail_path = PRIVATE_PATH . "/mail/{$name}.txt";
 		$this->_template = file_get_contents($mail_path);
 		return $this;
 	}

@@ -393,7 +393,7 @@ class KYPage extends KYHtml {
 	*/
 	public function write_log($title, $source, $message, $email = NULL) {
 		$text = date("Y-m-d H:i:s") . " ... {$title} ({$source}) : \n{$message}\n\n";
-		error_log($text, 3, PATH_PRIVATE . "/log/log_" . date("Y_m") . ".log");
+		error_log($text, 3, PRIVATE_PATH . "/log/log_" . date("Y_m") . ".log");
 		if ($email != NULL) {
 			error_log($error, 1, $email);
 		}
