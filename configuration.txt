@@ -19,8 +19,8 @@ Version 1.0.0
 	WEB
 		Set WWW (root url address) for this site.
 		Set INDEX (index url address) for this site.
-		Set PATH_PUBLIC (public path) for this site.
-		Set PATH_PRIVATE (private path) for this site.
+		Set PUBLIC_PATH (public path) for this site.
+		Set PRIVATE_PATH (private path) for this site.
 		Set if need redrect url to ssl.
 
 	DATABASE
