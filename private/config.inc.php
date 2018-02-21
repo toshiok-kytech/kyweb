@@ -32,8 +32,8 @@ session_start();
 
 define("WWW", "/sample.com");
 define("INDEX", WWW. "/page/top");
-define("PATH_PUBLIC", dirname(__FILE__) . "/../public");
-define("PATH_PRIVATE", dirname(__FILE__) . "/../private");
+define("PUBLIC_PATH", dirname(__FILE__) . "/../public");
+define("PRIVATE_PATH", dirname(__FILE__) . "/../private");
 define("REDIRECT_SSL", false);
 define("CROSS_DOMAIN", "*");
 define("LANGUAGE", "ja");

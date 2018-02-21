@@ -16,13 +16,13 @@ header("Pragma: no-cache");
 clearstatcache();
 
 // Require
-require_once(PATH_PRIVATE . "/library/kyapi.inc.php");
-require_once(PATH_PRIVATE . "/library/kydb.inc.php");
-require_once(PATH_PRIVATE . "/library/kyfile.inc.php");
-require_once(PATH_PRIVATE . "/library/kyhtml.inc.php");
-require_once(PATH_PRIVATE . "/library/kymail.inc.php");
-require_once(PATH_PRIVATE . "/library/kypage.inc.php");
-require_once(PATH_PRIVATE . "/library/kysample.inc.php");
+require_once(PRIVATE_PATH . "/library/kyapi.inc.php");
+require_once(PRIVATE_PATH . "/library/kydb.inc.php");
+require_once(PRIVATE_PATH . "/library/kyfile.inc.php");
+require_once(PRIVATE_PATH . "/library/kyhtml.inc.php");
+require_once(PRIVATE_PATH . "/library/kymail.inc.php");
+require_once(PRIVATE_PATH . "/library/kypage.inc.php");
+require_once(PRIVATE_PATH . "/library/kysample.inc.php");
 
 // Redirect to SSL
 if (REDIRECT_SSL && $_SERVER["HTTPS"] != "on") {
@@ -155,7 +155,7 @@ class KYWeb {
 		if ($target == "page") {
 			return $this->process_uri()->process_html()->process_php();
 		} else if ($target == "api") {
-			$this->_api_path = PATH_PRIVATE . "/api/" . $base_uri[2] . ".php";
+			$this->_api_path = PRIVATE_PATH . "/api/" . $base_uri[2] . ".php";
 			if (file_exists($this->_api_path) == true) {
 				require_once($this->_api_path);
 				return $this;
@@ -194,11 +194,11 @@ class KYWeb {
 			
 			KYPage::instance()->name($page_name);
 			
-			$this->_common_html_path = PATH_PUBLIC . "/html/common.html";
-			$this->_common_php_path  = PATH_PRIVATE . "/php/common.php";
-			$this->_page_html_path   = PATH_PUBLIC . "/html/{$page_name}.html";
-			$page_html_mobile_path   = PATH_PUBLIC . "/html/{$page_name}_mobile.html";
-			$this->_page_php_path    = PATH_PRIVATE . "/php/{$page_name}.php";
+			$this->_common_html_path = PUBLIC_PATH . "/html/common.html";
+			$this->_common_php_path  = PRIVATE_PATH . "/php/common.php";
+			$this->_page_html_path   = PUBLIC_PATH . "/html/{$page_name}.html";
+			$page_html_mobile_path   = PUBLIC_PATH . "/html/{$page_name}_mobile.html";
+			$this->_page_php_path    = PRIVATE_PATH . "/php/{$page_name}.php";
 			
 			// Is common html
 			if ($page_name === "common") {

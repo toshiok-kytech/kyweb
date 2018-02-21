@@ -54,7 +54,7 @@ class KYDB {
 	*/
 	private function __construct() {
 		// Load query
-		$query_path = PATH_PRIVATE . "/query";
+		$query_path = PRIVATE_PATH . "/query";
 		$file_list = KYFile::instance()->file_list($query_path);
 		foreach ($file_list as $fileName) {
 			if (substr(basename($fileName), -8) == ".sql.php") {
